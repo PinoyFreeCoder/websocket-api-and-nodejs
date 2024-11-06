@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>WebSocket Chat</title>
+    <link rel="stylesheet" href="style.css" />
+  </head>
+  <body>
+    <h1>Chat App</h1>
+    <div class="chat-container">
+      <!-- HTML User Form -->
+      <form method="post" id="usernameForm">
+        <label for="username">Enter your username:</label>
+        <input type="text" id="usernameInput" placeholder="Username" />
+        <button type="submit">Set Username</button>
+      </form>
+
+      <!-- Chat Messages Display -->
+      <ul id="messages"></ul>
+
+      <!-- HTML User message -->
+      <form method="post" id="chatForm">
+        <input type="text" id="messageInput" placeholder="Type a message..." />
+        <button type="submit">Send</button>
+      </form>
+    </div>
+
+    <!-- script -->
+    <script>
+      const ws = new WebSocket("ws://localhost:8000");
+      ws.binaryType = "arraybuffer";
+
+      ws.onopen = () => {
+        console.log("Connected to server");
+      };
+
+      ws.onmessage = (event) => {
+        const messageList = document.getElementById("messages");
+        const newMessage = document.createElement("li");
+
+        let data;
+        if (event.data instanceof ArrayBuffer) {
+          data = new TextDecoder("utf-8").decode(event.data);
+        } else {
+          data = event.data;
+        }
+
+        //Extract sender name and message
+        const [sender, message] = data.split(":", 2);
+
+        //Create message content element
+        const messageText = document.createElement("div");
+        messageText.textContent = message;
+        messageText.classList.add("message-text");
+
+        //Username label
+        const usernameLabel = document.createElement("span");
+        usernameLabel.textContent = sender;
+        usernameLabel.classList.add("username");
+
+        //Apply styling based on sender
+        if (sender === username) {
+          newMessage.classList.add("message--self");
+        } else {
+          newMessage.classList.add("message--other");
+        }
+
+        //Append username label and message text to the message item
+        newMessage.appendChild(messageText);
+        newMessage.appendChild(usernameLabel);
+
+        //Append the message item to the message list
+        messageList.appendChild(newMessage);
+
+        //Scroll to the latest message
+        messageList.scrollTop = messageList.scrollHeight;
+      };
+
+      //Username form submission
+      document
+        .getElementById("usernameForm")
+        .addEventListener("submit", (event) => {
+          event.preventDefault();
+          const usernameInput = document.getElementById("usernameInput");
+          username = usernameInput.value || "Anonymous";
+          usernameInput.value = "";
+
+          //hide username form and show the chat form
+          document.getElementById("usernameForm").style.display = "none";
+          document.getElementById("chatForm").style.display = "flex";
+        });
+
+      //chat form submission
+      document
+        .getElementById("chatForm")
+        .addEventListener("submit", (event) => {
+          event.preventDefault();
+          const messageInput = document.getElementById("messageInput");
+          const message = messageInput.value;
+
+          //Prepend username to the message
+          const messageWithUsername = `${username}: ${message}`;
+
+          ws.send(messageWithUsername);
+          messageInput.value = "";
+        });
+    </script>
+  </body>
+</html>
